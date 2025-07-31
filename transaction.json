@@ -1,0 +1,23 @@
+[
+    {
+        "type": "income",
+        "amount": 1000000000.0,
+        "category": "3 ",
+        "date": "2025-07-31",
+        "balance": 1000000000.0
+    },
+    {
+        "type": "expense",
+        "amount": 2000000.0,
+        "category": "hooker",
+        "date": "2025-07-31",
+        "balance": 998000000.0
+    },
+    {
+        "type": "expense",
+        "amount": 200000.0,
+        "category": "condom",
+        "date": "2025-07-31",
+        "balance": 997800000.0
+    }
+]
