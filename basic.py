@@ -1,154 +1,86 @@
-# 🧾 Simple Budget Tracker (Console)
-# This script allows users to track their income and expenses in a simple console application.
-
+import streamlit as st
 import json
 from datetime import date
+import pandas as pd
+import os
 
-# Initialize the balance and transactions
-balance = 0.0
-current_date = date.today().isoformat()
+FILENAME = "transaction.json"
 
-def display_balance():
-    """Display the current balance."""
-    # Read transactions from the JSON file
-    with open("transaction.json", mode="r", encoding="utf-8") as read_file:
-        try:
-            frien_data = json.load(read_file)
-            if frien_data:
-                # Calculate balance from all transactions
-                global balance
-                balance = sum(txn['amount'] for txn in frien_data if txn['type'] == 'income') - \
-                          sum(txn['amount'] for txn in frien_data if txn['type'] == 'expense')
-                print(f"Current balance: ₦{balance:.2f}")
-            else:   
-                print("No transactions found. Starting fresh.")
-                balance = 0.0
-        except json.JSONDecodeError:
-            # Handle empty or invalid JSON file
-            frie_data = []
-            print("No transactions found. Starting fresh.")
+# Initialize the transaction file if it doesn't exist
+if not os.path.exists(FILENAME):
+    with open(FILENAME, 'w') as f:
+        json.dump([], f)
 
-def add_income(amount, category, current_date):
-    """Add income to the balance and record the transaction."""
-    global balance
-    balance += float(amount)
-    if category == "":
-        category = "Others"
-    add_transaction(amount, category, current_date, type='income')
-    print(f"Income added: ₦{amount:.2f}")
+def load_transactions():
+    with open(FILENAME, 'r') as f:
+        return json.load(f)
 
-def add_expenses(amount, category, current_date):
-    """Add expense to the balance and record the transaction."""
-    global balance
-    balance -= float(amount)
-    if category == "":
-        category = "Others"
-    add_transaction(amount, category, current_date, type='expense')
-    print(f"Expenses added: ₦{amount:.2f}")
-
-def add_transaction(amount, category, current_date, type):
-    """Save a transaction (income or expense) to the JSON file."""
-    filename = "transaction.json"
-    # Load existing transactions
-    with open(filename, 'r') as f:
-        transactions = json.load(f)
-
-    # Append the new transaction
-    transactions.append({
-        'type': type,
-        'amount': amount,
-        'category': category,
-        'date': current_date,
-        'balance': balance,
-    })
-
-    # Save all transactions back to the file
-    with open(filename, 'w') as f:
+def save_transactions(transactions):
+    with open(FILENAME, 'w') as f:
         json.dump(transactions, f, indent=4)
 
-def main():
-    """Main loop for the budget tracker menu."""
-    while True:
-        # Show menu and get user action
-        display_action = input(
-        """=== Budget Tracker ===
-        1. Add Income
-        2. Add Expense
-        3. View Balance
-        4. View Transactions
-        5. View Spending by Category
-        6. Exit
-        Choose an option (1-6): """
-        )
-        # Add income
-        if display_action == "1":
-            try:
-                amount = float(input("How much would you like to add? "))
-                category = input("Enter the category (default is 'General'): ")
-                add_income(amount, category ,current_date)
-                display_balance()
-            except ValueError:
-                print("Invalid amount. Please enter a number.")
-        # Add expenses
-        elif display_action == "2":
-            try:
-                amount = float(input("How much would you like to add? "))
-                category = input("Enter the category (default is 'General'): ")
-                add_expenses(amount, category, current_date)
-            except ValueError:
-                print("Invalid amount. Please enter a number.")
-        # View balance
-        elif display_action == "3":
-            display_balance()
-        # View all transactions
-        elif display_action == "4":
-            try:
-                with open("transaction.json", 'r') as f:
-                    transactions = json.load(f)
-                if transactions:
-                    print("=" * 40)
-                    print("        📒 TRANSACTION HISTORY")
-                    print("=" * 40)
-                    print(f"{'TYPE':<10} | {'AMOUNT (₦)':<12} | CATEGORY  | DATE")
-                    print("-" * 40)
-                    
-                    for txn in transactions:
-                        print(f"{txn['type']:<10} | ₦{txn['amount']:<11,.2f} | {txn['category']:<10} | {txn['date']}")
-                    print("=" * 40)
-                else:
-                    print("No transactions found.")
-            except FileNotFoundError:
-                print("No transactions recorded yet.")
-        # View spending by category
-        elif display_action == "5":
-            try:
-                with open("transaction.json", 'r') as f:
-                    transactions = json.load(f)
-                if transactions:
-                    # List all available categories
-                    category_list = [txn['category'] for txn in transactions]
-                    print(f"Available categories: {', '.join(set(category_list))}")
-                    print("=" * 40)
-                    category_input = input("Enter a category to view spending ").strip()
-                    if not category_input:
-                        category_input = "General"
-                    for txn in transactions:
-                        if txn['category'] == category_input:
-                            print("=" * 40)
-                            print("        📊 SPENDING BY CATEGORY")
-                            print("=" * 40)
-                            print(f"{txn['type']:<10} | ₦{txn['amount']:<11,.2f} | {txn['category']:<10} | {txn['date']}")
-                            print("=" * 40)
-                else:
-                    print("No transactions found.")
-            except FileNotFoundError:
-                print("No transactions recorded yet.")
-        # Exit the program
-        elif display_action == "6":
-            print("Thanks for using ur friendly budget tracker")
-            break
-        else :
-            print(f"You typed '{display_action}', please make sure you write the right imprompt")
+def calculate_balance(transactions):
+    income = sum(t['amount'] for t in transactions if t['type'] == 'income')
+    expenses = sum(t['amount'] for t in transactions if t['type'] == 'expense')
+    return income - expenses
 
-if __name__ == "__main__":
-    main()
+# Streamlit App
+st.title("💰 Simple Budget Tracker")
+st.write("Track your income and expenses easily.")
+
+transactions = load_transactions()
+balance = calculate_balance(transactions)
+
+st.metric("Current Balance", f"₦{balance:,.2f}")
+
+# Tabs for Navigation
+tab1, tab2, tab3, tab4 = st.tabs(["➕ Add Income", "➖ Add Expense", "📜 Transactions", "📊 Spending by Category"])
+
+# Add Income
+with tab1:
+    st.subheader("Add Income")
+    income_amount = st.number_input("Amount", min_value=0.0, step=0.01)
+    income_category = st.text_input("Category", value="General")
+    if st.button("Save Income"):
+        transactions.append({
+            "type": "income",
+            "amount": income_amount,
+            "category": income_category,
+            "date": date.today().isoformat()
+        })
+        save_transactions(transactions)
+        st.success("✅ Income recorded successfully!")
+
+# Add Expense
+with tab2:
+    st.subheader("Add Expense")
+    expense_amount = st.number_input("Amount", min_value=0.0, step=0.01, key="expense")
+    expense_category = st.text_input("Category", value="General", key="expense_cat")
+    if st.button("Save Expense"):
+        transactions.append({
+            "type": "expense",
+            "amount": expense_amount,
+            "category": expense_category,
+            "date": date.today().isoformat()
+        })
+        save_transactions(transactions)
+        st.success("✅ Expense recorded successfully!")
+
+# View Transactions
+with tab3:
+    st.subheader("Transaction History")
+    if transactions:
+        df = pd.DataFrame(transactions)
+        st.dataframe(df)
+    else:
+        st.info("No transactions recorded yet.")
+
+# Spending by Category
+with tab4:
+    st.subheader("Spending by Category")
+    if transactions:
+        df = pd.DataFrame(transactions)
+        category_totals = df[df['type'] == 'expense'].groupby('category')['amount'].sum()
+        st.bar_chart(category_totals)
+    else:
+        st.info("No expenses recorded yet.")
